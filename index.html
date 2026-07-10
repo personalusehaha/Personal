@@ -140,7 +140,7 @@
 
 <main id="main"></main>
 
-<footer>Built with ❤️ · your favourites are saved on this device</footer>
+<footer>Built with 🩷 by UZAIR ELAHI</footer>
 
 <div class="overlay" id="overlay">
   <div class="modal" id="modal">
@@ -217,8 +217,8 @@ const categories = [
     {id:"vidresize", name:"Video Resize", icon:"🎬", type:"link", url:"https://www.clideo.com/resize-video"},
   ]},
   { name:"Movies", icon:"🎬", tools:[
-    {id:"bollywood", name:"Bollywood", icon:"🎥", type:"link", url:"https://REPLACE-WITH-YOUR-BOLLYWOOD-LINK"},
-    {id:"hollywood", name:"Hollywood", icon:"🍿", type:"link", url:"https://REPLACE-WITH-YOUR-HOLLYWOOD-LINK"},
+    {id:"bollywood", name:"Bollywood", icon:"🎥", type:"https://rogmovies.rest/", url:"https://REPLACE-WITH-YOUR-BOLLYWOOD-LINK"},
+    {id:"hollywood", name:"Hollywood", icon:"🍿", type:"https://vegamovies.navy/", url:"https://REPLACE-WITH-YOUR-HOLLYWOOD-LINK"},
   ]},
   { name:"Social media tools", icon:"📱", tools:[
     {id:"ytaudio", name:"YouTube Audio Downloader", icon:"🎧", type:"link", url:"https://y2mate.com"},
@@ -690,7 +690,7 @@ function setCompassMode(mode){
   document.getElementById('mode_compass').classList.toggle('on', mode==='compass');
   document.getElementById('mode_qibla').classList.toggle('on', mode==='qibla');
   document.getElementById('qibla_tag').style.display = mode==='qibla' ? 'block' : 'none';
-  document.getElementById('compass_needle').innerText = mode==='qibla' ? '⬆️' : '🧭';
+  document.getElementById('compass_needle').innerText = mode==='qibla' ? '' : '🧭';
   document.getElementById('compass_result').innerText = '';
   if(mode==='qibla' && qiblaBearing===null) locateForQibla();
 }
