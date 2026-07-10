@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ToolBae ✨ All Tools, One Click</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Poppins:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.2/confetti.browser.min.js"></script>
+<style>
+  :root{
+    --bg:#0F0B1E; --bg2:#170F30; --card:#1D1440;
+    --purple:#7C3AED; --pink:#FF3EA5; --cyan:#22D3EE; --lime:#C6FF3D;
+    --text:#F5F3FF; --muted:#A79FC7;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:'Poppins',sans-serif;
+    overflow-x:hidden;
+    position:relative;
+    min-height:100vh;
+  }
+  ::selection{background:var(--pink); color:#0F0B1E;}
+
+  /* ---- animated blobs ---- */
+  .blob{position:fixed; border-radius:50%; filter:blur(80px); opacity:.45; z-index:0; pointer-events:none;}
+  .blob1{width:420px; height:420px; background:var(--purple); top:-120px; left:-100px; animation:float1 14s ease-in-out infinite;}
+  .blob2{width:380px; height:380px; background:var(--pink); top:30%; right:-140px; animation:float2 16s ease-in-out infinite;}
+  .blob3{width:340px; height:340px; background:var(--cyan); bottom:-120px; left:20%; animation:float3 18s ease-in-out infinite;}
+  @keyframes float1{0%,100%{transform:translate(0,0) scale(1);} 50%{transform:translate(60px,80px) scale(1.15);}}
+  @keyframes float2{0%,100%{transform:translate(0,0) scale(1);} 50%{transform:translate(-70px,60px) scale(1.1);}}
+  @keyframes float3{0%,100%{transform:translate(0,0) scale(1);} 50%{transform:translate(50px,-60px) scale(1.2);}}
+
+  /* ---- marquee ---- */
+  .marquee{position:relative; z-index:1; background:linear-gradient(90deg,var(--pink),var(--purple)); overflow:hidden; padding:10px 0; white-space:nowrap; transform:rotate(-1.2deg); margin:0 -20px;}
+  .marquee span{display:inline-block; padding-left:100%; animation:scroll 18s linear infinite; font-family:'Space Mono',monospace; font-weight:700; letter-spacing:2px; font-size:14px;}
+  @keyframes scroll{0%{transform:translateX(0);} 100%{transform:translateX(-100%);}}
+
+  /* ---- header / hero ---- */
+  header{position:relative; z-index:2; text-align:center; padding:70px 20px 40px;}
+  .credit{
+    display:inline-block; font-family:'Space Mono',monospace; font-size:12px;
+    color:var(--muted); border:1px solid rgba(167,159,199,.35); padding:6px 14px;
+    border-radius:999px; margin-bottom:26px; letter-spacing:1px;
+  }
+  .credit b{color:var(--lime);}
+  h1{
+    font-family:'Fredoka',sans-serif; font-weight:700;
+    font-size:clamp(36px,8vw,74px); line-height:1.05;
+    background:linear-gradient(90deg,var(--pink),var(--cyan),var(--lime));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    background-size:200% auto; animation:gradientMove 6s linear infinite;
+  }
+  @keyframes gradientMove{0%{background-position:0% center;} 100%{background-position:200% center;}}
+  h1 .wiggle{display:inline-block; animation:wiggle 2.4s ease-in-out infinite;}
+  @keyframes wiggle{0%,100%{transform:rotate(0deg);} 25%{transform:rotate(-8deg);} 75%{transform:rotate(8deg);}}
+  .sub{font-size:clamp(15px,2.4vw,19px); color:var(--muted); margin-top:16px; font-weight:500;}
+  .tags{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:22px;}
+  .tags span{
+    font-family:'Space Mono',monospace; font-size:12px; padding:6px 14px; border-radius:999px;
+    background:var(--card); border:1px solid rgba(255,255,255,.08);
+  }
+
+  /* ---- sections ---- */
+  main{position:relative; z-index:2; max-width:1100px; margin:0 auto; padding:20px 20px 80px;}
+  .category{margin-top:60px;}
+  .cat-head{display:flex; align-items:center; gap:14px; margin-bottom:22px;}
+  .cat-emoji{font-size:34px; animation:bounce 2.5s ease-in-out infinite;}
+  @keyframes bounce{0%,100%{transform:translateY(0);} 50%{transform:translateY(-8px);}}
+  .cat-head h2{font-family:'Fredoka',sans-serif; font-size:clamp(22px,4vw,30px); font-weight:600;}
+  .cat-head .count{font-family:'Space Mono',monospace; font-size:12px; color:var(--muted);}
+
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:16px;}
+  .tool{
+    position:relative; background:var(--card); border:1px solid rgba(255,255,255,.08);
+    border-radius:20px; padding:22px 18px; cursor:pointer; text-align:left;
+    transition:transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s, border-color .25s;
+    overflow:hidden; color:var(--text); font-family:inherit;
+  }
+  .tool::before{
+    content:""; position:absolute; inset:0; opacity:0; transition:opacity .3s;
+    background:radial-gradient(circle at 30% 20%, rgba(255,255,255,.12), transparent 60%);
+  }
+  .tool:hover{transform:translateY(-6px) rotate(-1deg) scale(1.03); box-shadow:0 14px 30px rgba(124,58,237,.35); border-color:var(--pink);}
+  .tool:hover::before{opacity:1;}
+  .tool:active{transform:translateY(-2px) scale(.98);}
+  .tool .icon{font-size:30px; display:block; margin-bottom:10px;}
+  .tool .name{font-weight:600; font-size:15.5px; display:block;}
+  .tool .desc{font-size:12px; color:var(--muted); margin-top:4px; display:block;}
+  .tool .badge{
+    position:absolute; top:12px; right:12px; font-family:'Space Mono',monospace; font-size:9px;
+    padding:3px 8px; border-radius:999px; background:rgba(198,255,61,.15); color:var(--lime); border:1px solid rgba(198,255,61,.3);
+  }
+  .tool .badge.ext{background:rgba(34,211,238,.15); color:var(--cyan); border-color:rgba(34,211,238,.3);}
+
+  footer{position:relative; z-index:2; text-align:center; padding:40px 20px 60px; color:var(--muted); font-size:13px; font-family:'Space Mono',monospace;}
+  footer b{color:var(--pink);}
+
+  /* ---- modal ---- */
+  .overlay{position:fixed; inset:0; background:rgba(8,5,20,.75); backdrop-filter:blur(6px); z-index:50; display:none; align-items:center; justify-content:center; padding:20px;}
+  .overlay.open{display:flex;}
+  .modal{
+    background:var(--bg2); border:1px solid rgba(255,255,255,.1); border-radius:22px; max-width:480px; width:100%;
+    max-height:86vh; overflow-y:auto; padding:26px 24px; animation:pop .3s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes pop{0%{transform:scale(.85); opacity:0;} 100%{transform:scale(1); opacity:1;}}
+  .modal h3{font-family:'Fredoka',sans-serif; font-size:22px; margin-bottom:6px;}
+  .modal p.hint{font-size:12.5px; color:var(--muted); margin-bottom:16px;}
+  .modal label{font-size:12px; color:var(--muted); display:block; margin:14px 0 6px;}
+  .modal input[type=text], .modal input[type=number], .modal input[type=date], .modal textarea, .modal input[type=file]{
+    width:100%; background:var(--card); border:1px solid rgba(255,255,255,.12); color:var(--text);
+    padding:10px 12px; border-radius:12px; font-family:'Poppins',sans-serif; font-size:14px;
+  }
+  .modal textarea{resize:vertical; min-height:80px;}
+  .modal input[type=range]{width:100%; accent-color:var(--pink);}
+  .close-x{position:absolute; top:18px; right:22px; font-size:22px; cursor:pointer; color:var(--muted); background:none; border:none;}
+  .btn{
+    margin-top:18px; width:100%; padding:12px; border:none; border-radius:14px; font-weight:600; font-size:14px;
+    background:linear-gradient(90deg,var(--pink),var(--purple)); color:white; cursor:pointer; font-family:'Poppins',sans-serif;
+    transition:transform .15s;
+  }
+  .btn:hover{transform:scale(1.02);}
+  .btn:active{transform:scale(.97);}
+  .result{margin-top:16px; font-size:14px; background:var(--card); padding:14px; border-radius:12px; display:none; line-height:1.7;}
+  .result img{max-width:100%; border-radius:10px; margin-top:8px;}
+  .thumbs{display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:10px;}
+  .thumbs img{width:100%; border-radius:6px;}
+
+  /* ---- logo icons (uploaded png files, e.g. youtube.png) ---- */
+  .icon.logo{display:flex; align-items:center; justify-content:flex-start; height:34px; margin-bottom:10px;}
+  .icon.logo img{width:30px; height:30px; object-fit:contain; border-radius:8px; display:inline-block; background:rgba(255,255,255,.06);}
+  .icon.logo .fallback-emoji{display:none; font-size:28px; line-height:1;}
+
+  /* ---- ripple click animation (buttons + tool cards) ---- */
+  .tool, .btn{position:relative; overflow:hidden;}
+  .ripple-fx{position:absolute; border-radius:50%; transform:scale(0); pointer-events:none;
+    background:radial-gradient(circle, rgba(255,255,255,.75), rgba(255,62,165,.35) 60%, transparent 75%);
+    animation:rippleGrow .6s ease-out forwards;}
+  @keyframes rippleGrow{ to{ transform:scale(2.6); opacity:0; } }
+  .tool.flash{animation:colorFlash .45s ease;}
+  @keyframes colorFlash{
+    0%{box-shadow:0 0 0 0 rgba(198,255,61,0);}
+    30%{box-shadow:0 0 0 6px rgba(198,255,61,.35); border-color:var(--lime);}
+    100%{box-shadow:0 0 0 0 rgba(198,255,61,0); border-color:rgba(255,255,255,.08);}
+  }
+
+  /* ---- embedded external tool iframe (keeps user on this page) ---- */
+  .iframe-wrap{width:100%; height:56vh; min-height:340px; border-radius:14px; overflow:hidden; background:#fff; margin-top:6px; border:1px solid rgba(255,255,255,.12);}
+  .iframe-wrap iframe{width:100%; height:100%; border:none;}
+  .ext-note{font-size:11.5px; color:var(--muted); margin-top:8px; line-height:1.5;}
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none !important; transition:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<div class="blob blob1"></div>
+<div class="blob blob2"></div>
+<div class="blob blob3"></div>
+
+<div class="marquee"><span>✨ FREE FOREVER &nbsp;•&nbsp; NO SIGNUP &nbsp;•&nbsp; 100% IN YOUR BROWSER &nbsp;•&nbsp; ZERO ADS &nbsp;•&nbsp; ✨ FREE FOREVER &nbsp;•&nbsp; NO SIGNUP &nbsp;•&nbsp; 100% IN YOUR BROWSER &nbsp;•&nbsp; ZERO ADS &nbsp;•&nbsp;</span></div>
+
+<header>
+  <div class="credit">created by <b>Uzair Elahi</b> 🚀</div>
+  <h1>All Tools <span class="wiggle">🛠️</span><br>One Click Away</h1>
+  <p class="sub">Photo, social, calculator & everyday tools — free, fast, no login required.</p>
+  <div class="tags"><span>🖼️ Photo</span><span>📱 Social</span><span>🧮 Calculator</span><span>⚡ Utility</span></div>
+</header>
+
+<main>
+
+  <!-- PHOTO TOOLS -->
+  <section class="category">
+    <div class="cat-head"><span class="cat-emoji">🖼️</span><h2>Photo Tools</h2><span class="count">7 tools</span></div>
+    <div class="grid">
+      <button class="tool" onclick="openModal('photoToPdf')"><span class="badge">IN-BROWSER</span><span class="icon">📄</span><span class="name">Photo to PDF</span><span class="desc">Turn images into one PDF</span></button>
+      <button class="tool" onclick="openModal('compress')"><span class="badge">IN-BROWSER</span><span class="icon">🗜️</span><span class="name">Image Compressor</span><span class="desc">Shrink file size instantly</span></button>
+      <button class="tool" onclick="openModal('merge')"><span class="badge">IN-BROWSER</span><span class="icon">📎</span><span class="name">PDF Merge</span><span class="desc">Combine PDFs into one</span></button>
+      <button class="tool" onclick="openModal('handwriting')"><span class="badge">IN-BROWSER</span><span class="icon">✍️</span><span class="name">Text to Handwriting</span><span class="desc">Make text look handwritten</span></button>
+      <button class="tool" onclick="openExternal('https://www.remove.bg','Background Remover','🪄')"><span class="badge ext">FREE SITE</span><span class="icon">🪄</span><span class="name">Background Remover</span><span class="desc">remove.bg — one click</span></button>
+      <button class="tool" onclick="openExternal('https://www.craiyon.com','AI Image Generator','🤖')"><span class="badge ext">FREE SITE</span><span class="icon">🤖</span><span class="name">AI Image Generator</span><span class="desc">Craiyon — free, no login</span></button>
+      <button class="tool" onclick="openModal('resize')"><span class="badge">IN-BROWSER</span><span class="icon">📐</span><span class="name">Resize Image</span><span class="desc">Change width & height</span></button>
+      <button class="tool" onclick="openExternal('https://www.ilovepdf.com/word_to_pdf','Word to PDF','📝')"><span class="badge ext">FREE SITE</span><span class="icon">📝</span><span class="name">Word to PDF</span><span class="desc">iLovePDF — free converter</span></button>
+    </div>
+  </section>
+
+  <!-- SOCIAL TOOLS -->
+  <section class="category">
+    <div class="cat-head"><span class="cat-emoji">📱</span><h2>Social Media Tools</h2><span class="count">8 tools</span></div>
+    <div class="grid">
+      <button class="tool" onclick="openModal('ytThumb')"><span class="badge">IN-BROWSER</span><span class="icon logo"><img src="youtube.png" alt="YouTube" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'"><span class="fallback-emoji">🎬</span></span><span class="name">YouTube Thumbnail</span><span class="desc">Grab any thumbnail HD</span></button>
+      <button class="tool" onclick="openExternal('https://9xbuddy.com','YouTube Video Downloader','🎥')"><span class="badge ext">FREE SITE</span><span class="icon logo"><img src="youtube.png" alt="YouTube" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'"><span class="fallback-emoji">🎥</span></span><span class="name">YouTube Video Downloader</span><span class="desc">Save videos for offline</span></button>
+      <button class="tool" onclick="openExternal('https://yt1s.com','YouTube Audio (MP3) Downloader','🎵')"><span class="badge ext">FREE SITE</span><span class="icon logo"><img src="youtube.png" alt="YouTube" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'"><span class="fallback-emoji">🎵</span></span><span class="name">YouTube Audio Downloader</span><span class="desc">Extract audio as MP3</span></button>
+      <button class="tool" onclick="openModal('igGrid')"><span class="badge">IN-BROWSER</span><span class="icon logo"><img src="instagram.png" alt="Instagram" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'"><span class="fallback-emoji">🔲</span></span><span class="name">Instagram Grid Maker</span><span class="desc">Split your photo into 9 tiles</span></button>
+      <button class="tool" onclick="openExternal('https://snapinsta.app','Instagram Reel Downloader','🎬')"><span class="badge ext">FREE SITE</span><span class="icon logo"><img src="instagram.png" alt="Instagram" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'"><span class="fallback-emoji">🎬</span></span><span class="name">Instagram Reel Downloader</span><span class="desc">Save reels to your device</span></button>
+      <button class="tool" onclick="openExternal('https://snapinsta.app','Instagram Photo/Story Saver','🖼️')"><span class="badge ext">FREE SITE</span><span class="icon logo"><img src="instagram.png" alt="Instagram" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'"><span class="fallback-emoji">🖼️</span></span><span class="name">Instagram Photo/Story Saver</span><span class="desc">Download posts & stories</span></button>
+      <button class="tool" onclick="openExternal('https://fbdown.net','Facebook Video Downloader','📘')"><span class="badge ext">FREE SITE</span><span class="icon logo"><img src="facebook.png" alt="Facebook" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'"><span class="fallback-emoji">📘</span></span><span class="name">Facebook Video Downloader</span><span class="desc">Save FB videos, no login</span></button>
+      <button class="tool" onclick="openExternal('https://ssstik.io','TikTok Video Downloader','🎵')"><span class="badge ext">FREE SITE</span><span class="icon logo"><img src="tiktok.png" alt="TikTok" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'"><span class="fallback-emoji">🎵</span></span><span class="name">TikTok Video Downloader</span><span class="desc">No-watermark saves</span></button>
+    </div>
+  </section>
+
+  <!-- CALCULATOR TOOLS -->
+  <section class="category">
+    <div class="cat-head"><span class="cat-emoji">🧮</span><h2>Calculator Tools</h2><span class="count">3 tools</span></div>
+    <div class="grid">
+      <button class="tool" onclick="openModal('age')"><span class="badge">IN-BROWSER</span><span class="icon">🎂</span><span class="name">Age Calculator</span><span class="desc">Exact age in Y/M/D</span></button>
+      <button class="tool" onclick="openModal('gst')"><span class="badge">IN-BROWSER</span><span class="icon">💰</span><span class="name">GST Calculator</span><span class="desc">Add or remove GST</span></button>
+      <button class="tool" onclick="openModal('percent')"><span class="badge">IN-BROWSER</span><span class="icon">💯</span><span class="name">Percentage Calculator</span><span class="desc">Quick % of any number</span></button>
+    </div>
+  </section>
+
+  <!-- UTILITIES -->
+  <section class="category">
+    <div class="cat-head"><span class="cat-emoji">⚡</span><h2>Everyday Utilities</h2><span class="count">2 tools</span></div>
+    <div class="grid">
+      <button class="tool" onclick="openModal('qr')"><span class="badge">IN-BROWSER</span><span class="icon">🔳</span><span class="name">QR Code Generator</span><span class="desc">Text or link to QR, instant</span></button>
+      <button class="tool" onclick="openExternal('https://fast.com','Internet Speed Test','🚀')"><span class="badge ext">FREE SITE</span><span class="icon">🚀</span><span class="name">Internet Speed Test</span><span class="desc">Fast.com by Netflix</span></button>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  made with <b>♥</b> by <b>Uzair Elahi</b> — no signup, no tracking, just tools.
+</footer>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modalBox">
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+/* ---------- sound engine (boosted volume + legendary unlock sound) ---------- */
+let audioCtx, masterGain;
+function ensureAudio(){
+  if(!audioCtx){
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 2.0; /* boosted ~200% louder */
+    const comp = audioCtx.createDynamicsCompressor(); /* keeps the boost from clipping/distorting */
+    comp.threshold.value = -12; comp.knee.value = 20; comp.ratio.value = 8;
+    masterGain.connect(comp);
+    comp.connect(audioCtx.destination);
+  }
+  return audioCtx;
+}
+function playBoop(){
+  try{
+    ensureAudio();
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(520, t);
+    osc.frequency.exponentialRampToValueAtTime(920, t+0.12);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.35, t+0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t+0.2);
+    osc.connect(gain).connect(masterGain);
+    osc.start(t); osc.stop(t+0.22);
+  }catch(e){}
+}
+
+/* "legendary item unlock" style chime — plays once, first time the page opens */
+function playLegendarySound(){
+  try{
+    ensureAudio();
+    const t0 = audioCtx.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51]; /* C5 E5 G5 C6 E6 — rising sparkle */
+    notes.forEach((freq, i)=>{
+      const start = t0 + i*0.11;
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, start);
+      g.gain.setValueAtTime(0.0001, start);
+      g.gain.exponentialRampToValueAtTime(0.5, start+0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, start+0.9);
+      osc.connect(g).connect(masterGain);
+      osc.start(start); osc.stop(start+0.95);
+    });
+    /* a shimmering high sparkle layer + final swelling chord for that "heavenly" feel */
+    const chordStart = t0 + 0.55;
+    [1046.50, 1318.51, 1567.98].forEach(freq=>{
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass'; filter.frequency.value = 4000;
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, chordStart);
+      g.gain.setValueAtTime(0.0001, chordStart);
+      g.gain.exponentialRampToValueAtTime(0.4, chordStart+0.15);
+      g.gain.exponentialRampToValueAtTime(0.0001, chordStart+1.6);
+      osc.connect(filter).connect(g).connect(masterGain);
+      osc.start(chordStart); osc.stop(chordStart+1.7);
+    });
+  }catch(e){}
+}
+let legendaryPlayed = false;
+function tryPlayLegendary(){
+  if(legendaryPlayed) return;
+  try{
+    ensureAudio();
+    audioCtx.resume().then(()=>{
+      if(legendaryPlayed) return;
+      legendaryPlayed = true;
+      playLegendarySound();
+    }).catch(()=>{});
+  }catch(e){}
+}
+window.addEventListener('load', tryPlayLegendary);
+['pointerdown','keydown','touchstart'].forEach(evt=>{
+  window.addEventListener(evt, tryPlayLegendary, { once:true });
+});
+
+function burstConfetti(){
+  if(window.confetti){
+    confetti({particleCount:60, spread:70, origin:{y:0.7}, colors:['#FF3EA5','#7C3AED','#22D3EE','#C6FF3D']});
+  }
+}
+
+/* ---------- click feedback: sound + ripple + color flash on every tool/button ---------- */
+function spawnRipple(el, x, y){
+  const rect = el.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height) * 1.4;
+  const ripple = document.createElement('span');
+  ripple.className = 'ripple-fx';
+  ripple.style.width = ripple.style.height = size + 'px';
+  ripple.style.left = (x - rect.left - size/2) + 'px';
+  ripple.style.top = (y - rect.top - size/2) + 'px';
+  el.appendChild(ripple);
+  setTimeout(()=> ripple.remove(), 650);
+}
+document.addEventListener('click', (e)=>{
+  const el = e.target.closest('.tool') || e.target.closest('.btn');
+  if(!el) return;
+  playBoop();
+  spawnRipple(el, e.clientX, e.clientY);
+  if(el.classList.contains('tool')){
+    el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  }
+}, true);
+
+/* ---------- external tools now open INSIDE the page (embedded), not a new tab ---------- */
+function openExternal(url, title, icon){
+  burstConfetti();
+  modalContent.innerHTML = `
+    <h3>${icon} ${title}</h3>
+    <p class="hint">Loaded right here on ToolBae — no tab switching needed.</p>
+    <div class="iframe-wrap"><iframe src="${url}" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
+    <p class="ext-note">Some sites block embedding for security reasons — if the box above stays blank, tap below.</p>
+    <button class="btn" onclick="window.open('${url}','_blank','noopener')">Open in a New Tab Instead</button>
+  `;
+  overlay.classList.add('open');
+}
+
+/* ---------- modal system ---------- */
+const overlay = document.getElementById('overlay');
+const modalContent = document.getElementById('modalContent');
+
+function closeModal(){ overlay.classList.remove('open'); modalContent.innerHTML=''; }
+overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
+
+const templates = {
+  photoToPdf: `
+    <h3>📄 Photo to PDF</h3><p class="hint">Pick multiple images — they'll become pages of one PDF.</p>
+    <input type="file" id="p2p-input" accept="image/*" multiple>
+    <button class="btn" onclick="doPhotoToPdf()">Convert to PDF</button>
+    <div class="result" id="p2p-result"></div>`,
+  compress: `
+    <h3>🗜️ Image Compressor</h3><p class="hint">Reduce file size, keep it in your browser.</p>
+    <input type="file" id="cmp-input" accept="image/*">
+    <label>Quality: <span id="cmp-val">70</span>%</label>
+    <input type="range" id="cmp-range" min="10" max="95" value="70" oninput="document.getElementById('cmp-val').textContent=this.value">
+    <button class="btn" onclick="doCompress()">Compress Image</button>
+    <div class="result" id="cmp-result"></div>`,
+  merge: `
+    <h3>📎 PDF Merge</h3><p class="hint">Pick 2 or more PDFs, in the order you want them merged.</p>
+    <input type="file" id="mrg-input" accept="application/pdf" multiple>
+    <button class="btn" onclick="doMerge()">Merge PDFs</button>
+    <div class="result" id="mrg-result"></div>`,
+  handwriting: `
+    <h3>✍️ Text to Handwriting</h3><p class="hint">Type anything, get a handwritten-style image.</p>
+    <textarea id="hw-input" placeholder="Write something...">Hello from ToolBae!</textarea>
+    <button class="btn" onclick="doHandwriting()">Generate</button>
+    <div class="result" id="hw-result"></div>`,
+  resize: `
+    <h3>📐 Resize Image</h3><p class="hint">Set new width & height in pixels.</p>
+    <input type="file" id="rsz-input" accept="image/*">
+    <label>Width (px)</label><input type="number" id="rsz-w" value="800">
+    <label>Height (px)</label><input type="number" id="rsz-h" value="600">
+    <button class="btn" onclick="doResize()">Resize</button>
+    <div class="result" id="rsz-result"></div>`,
+  ytThumb: `
+    <h3>🎬 YouTube Thumbnail Grabber</h3><p class="hint">Paste any YouTube video link.</p>
+    <input type="text" id="yt-input" placeholder="https://youtube.com/watch?v=...">
+    <button class="btn" onclick="doYtThumb()">Get Thumbnail</button>
+    <div class="result" id="yt-result"></div>`,
+  igGrid: `
+    <h3>🔲 Instagram Grid Maker</h3><p class="hint">Splits your own photo into a 3×3 grid, downloads as ZIP.</p>
+    <input type="file" id="grid-input" accept="image/*">
+    <button class="btn" onclick="doGrid()">Split into Grid</button>
+    <div class="result" id="grid-result"></div>`,
+  age: `
+    <h3>🎂 Age Calculator</h3><p class="hint">Pick your date of birth.</p>
+    <label>Date of birth</label><input type="date" id="age-input">
+    <button class="btn" onclick="doAge()">Calculate Age</button>
+    <div class="result" id="age-result"></div>`,
+  gst: `
+    <h3>💰 GST Calculator</h3><p class="hint">Add or remove GST from an amount.</p>
+    <label>Amount (₹)</label><input type="number" id="gst-amt" value="1000">
+    <label>GST %</label><input type="number" id="gst-rate" value="18">
+    <button class="btn" onclick="doGst('add')">Add GST</button>
+    <button class="btn" style="background:linear-gradient(90deg,var(--cyan),var(--purple)); margin-top:8px;" onclick="doGst('remove')">Remove GST</button>
+    <div class="result" id="gst-result"></div>`,
+  percent: `
+    <h3>💯 Percentage Calculator</h3><p class="hint">What is X% of Y?</p>
+    <label>X (%)</label><input type="number" id="pc-x" value="10">
+    <label>of Y</label><input type="number" id="pc-y" value="500">
+    <button class="btn" onclick="doPercent()">Calculate</button>
+    <div class="result" id="pc-result"></div>`,
+  qr: `
+    <h3>🔳 QR Code Generator</h3><p class="hint">Type text or a link, get an instant QR code.</p>
+    <input type="text" id="qr-input" placeholder="https://example.com">
+    <button class="btn" onclick="doQr()">Generate QR</button>
+    <div class="result" id="qr-result"><div id="qr-canvas-holder"></div></div>`,
+};
+
+function openModal(key){
+  playBoop();
+  modalContent.innerHTML = templates[key];
+  overlay.classList.add('open');
+}
+
+function showResult(id, html){
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  el.innerHTML = html;
+}
+
+/* ---------- Photo to PDF ---------- */
+function doPhotoToPdf(){
+  const files = document.getElementById('p2p-input').files;
+  if(!files.length){ alert('Pick at least one image'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let loaded = 0;
+  const imgs = [];
+  [...files].forEach((f,i)=>{
+    const reader = new FileReader();
+    reader.onload = e => {
+      imgs[i] = e.target.result;
+      loaded++;
+      if(loaded === files.length){
+        imgs.forEach((src, idx) => {
+          const img = new Image();
+          img.src = src;
+          const pw = doc.internal.pageSize.getWidth();
+          const ph = doc.internal.pageSize.getHeight();
+          if(idx>0) doc.addPage();
+          doc.addImage(src, 'JPEG', 10, 10, pw-20, ph-20, undefined, 'FAST');
+        });
+        doc.save('photos.pdf');
+        burstConfetti();
+        showResult('p2p-result', '✅ PDF downloaded!');
+      }
+    };
+    reader.readAsDataURL(f);
+  });
+}
+
+/* ---------- Compress ---------- */
+function doCompress(){
+  const file = document.getElementById('cmp-input').files[0];
+  if(!file){ alert('Pick an image'); return; }
+  const quality = document.getElementById('cmp-range').value / 100;
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = e => {
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width; canvas.height = img.height;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const sizeKB = (blob.size/1024).toFixed(1);
+        showResult('cmp-result', `✅ Compressed to ${sizeKB} KB<br><a class="btn" style="display:inline-block;text-decoration:none;text-align:center;" href="${url}" download="compressed.jpg">Download</a>`);
+        burstConfetti();
+      }, 'image/jpeg', quality);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ---------- Merge PDFs ---------- */
+async function doMerge(){
+  const files = document.getElementById('mrg-input').files;
+  if(files.length < 2){ alert('Pick at least 2 PDFs'); return; }
+  const { PDFDocument } = PDFLib;
+  const merged = await PDFDocument.create();
+  for(const f of files){
+    const bytes = await f.arrayBuffer();
+    const src = await PDFDocument.load(bytes);
+    const pages = await merged.copyPages(src, src.getPageIndices());
+    pages.forEach(p => merged.addPage(p));
+  }
+  const outBytes = await merged.save();
+  const blob = new Blob([outBytes], {type:'application/pdf'});
+  const url = URL.createObjectURL(blob);
+  showResult('mrg-result', `✅ Merged!<br><a class="btn" style="display:inline-block;text-decoration:none;text-align:center;" href="${url}" download="merged.pdf">Download PDF</a>`);
+  burstConfetti();
+}
+
+/* ---------- Text to Handwriting ---------- */
+function doHandwriting(){
+  const text = document.getElementById('hw-input').value || '...';
+  const canvas = document.createElement('canvas');
+  canvas.width = 800; canvas.height = 500;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fdf6e3'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle = '#cbb994';
+  for(let y=60; y<canvas.height; y+=42){ ctx.beginPath(); ctx.moveTo(20,y); ctx.lineTo(canvas.width-20,y); ctx.stroke(); }
+  ctx.fillStyle = '#2b3a67';
+  ctx.font = "32px 'Comic Sans MS', cursive";
+  const words = text.split(' ');
+  let line = '', y = 90, x = 40, maxW = canvas.width - 80;
+  words.forEach(w => {
+    const test = line + w + ' ';
+    if(ctx.measureText(test).width > maxW){ ctx.fillText(line, x, y); line = w + ' '; y += 42; }
+    else line = test;
+  });
+  ctx.fillText(line, x, y);
+  const url = canvas.toDataURL('image/png');
+  showResult('hw-result', `<img src="${url}"><br><a class="btn" style="display:inline-block;text-decoration:none;text-align:center;" href="${url}" download="handwriting.png">Download Image</a>`);
+  burstConfetti();
+}
+
+/* ---------- Resize ---------- */
+function doResize(){
+  const file = document.getElementById('rsz-input').files[0];
+  const w = parseInt(document.getElementById('rsz-w').value);
+  const h = parseInt(document.getElementById('rsz-h').value);
+  if(!file){ alert('Pick an image'); return; }
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = e => {
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const url = canvas.toDataURL('image/png');
+      showResult('rsz-result', `✅ Resized to ${w}×${h}<br><a class="btn" style="display:inline-block;text-decoration:none;text-align:center;" href="${url}" download="resized.png">Download</a>`);
+      burstConfetti();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ---------- YouTube Thumbnail ---------- */
+function doYtThumb(){
+  const url = document.getElementById('yt-input').value;
+  const match = url.match(/(?:youtu\.be\/|v=|shorts\/)([A-Za-z0-9_-]{11})/);
+  if(!match){ showResult('yt-result', '❌ Could not find a valid video ID in that link.'); return; }
+  const id = match[1];
+  const thumb = `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
+  showResult('yt-result', `<img src="${thumb}"><br><a class="btn" style="display:inline-block;text-decoration:none;text-align:center;" href="${thumb}" download="thumbnail.jpg" target="_blank">Download</a>`);
+  burstConfetti();
+}
+
+/* ---------- Instagram Grid Maker ---------- */
+function doGrid(){
+  const file = document.getElementById('grid-input').files[0];
+  if(!file){ alert('Pick an image'); return; }
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = e => {
+    img.onload = async () => {
+      const size = Math.min(img.width, img.height);
+      const tile = size/3;
+      const zip = new JSZip();
+      let previewHtml = '<div class="thumbs">';
+      const promises = [];
+      for(let row=0; row<3; row++){
+        for(let col=0; col<3; col++){
+          const canvas = document.createElement('canvas');
+          canvas.width = tile; canvas.height = tile;
+          canvas.getContext('2d').drawImage(img, col*tile, row*tile, tile, tile, 0, 0, tile, tile);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+          previewHtml += `<img src="${dataUrl}">`;
+          const idx = row*3+col+1;
+          promises.push(new Promise(res => canvas.toBlob(blob => { zip.file(`tile-${idx}.jpg`, blob); res(); }, 'image/jpeg', 0.92)));
+        }
+      }
+      previewHtml += '</div>';
+      await Promise.all(promises);
+      const zipBlob = await zip.generateAsync({type:'blob'});
+      const zipUrl = URL.createObjectURL(zipBlob);
+      showResult('grid-result', previewHtml + `<a class="btn" style="display:inline-block;text-decoration:none;text-align:center;" href="${zipUrl}" download="ig-grid.zip">Download ZIP</a>`);
+      burstConfetti();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ---------- Age Calculator ---------- */
+function doAge(){
+  const val = document.getElementById('age-input').value;
+  if(!val){ alert('Pick a date'); return; }
+  const dob = new Date(val);
+  const now = new Date();
+  let y = now.getFullYear() - dob.getFullYear();
+  let m = now.getMonth() - dob.getMonth();
+  let d = now.getDate() - dob.getDate();
+  if(d < 0){ m--; d += new Date(now.getFullYear(), now.getMonth(), 0).getDate(); }
+  if(m < 0){ y--; m += 12; }
+  showResult('age-result', `🎉 You are <b>${y} years, ${m} months, ${d} days</b> old.`);
+}
+
+/* ---------- GST Calculator ---------- */
+function doGst(mode){
+  const amt = parseFloat(document.getElementById('gst-amt').value);
+  const rate = parseFloat(document.getElementById('gst-rate').value);
+  if(mode==='add'){
+    const gstAmt = amt*rate/100;
+    showResult('gst-result', `GST amount: ₹${gstAmt.toFixed(2)}<br>Total: <b>₹${(amt+gstAmt).toFixed(2)}</b>`);
+  } else {
+    const base = amt/(1+rate/100);
+    showResult('gst-result', `Base amount: <b>₹${base.toFixed(2)}</b><br>GST removed: ₹${(amt-base).toFixed(2)}`);
+  }
+}
+
+/* ---------- Percentage ---------- */
+function doPercent(){
+  const x = parseFloat(document.getElementById('pc-x').value);
+  const y = parseFloat(document.getElementById('pc-y').value);
+  showResult('pc-result', `${x}% of ${y} = <b>${(x*y/100).toFixed(2)}</b>`);
+}
+
+/* ---------- QR ---------- */
+function doQr(){
+  const text = document.getElementById('qr-input').value;
+  if(!text){ alert('Type something first'); return; }
+  const holder = document.getElementById('qr-canvas-holder');
+  holder.innerHTML = '';
+  new QRCode(holder, { text, width:200, height:200, colorDark:"#170F30", colorLight:"#ffffff" });
+  document.getElementById('qr-result').style.display = 'block';
+  setTimeout(()=>{
+    const img = holder.querySelector('img') || holder.querySelector('canvas');
+    if(img){
+      const dl = document.createElement('a');
+      dl.href = img.tagName==='CANVAS' ? img.toDataURL() : img.src;
+      dl.download = 'qrcode.png';
+      dl.className = 'btn'; dl.style.display='inline-block'; dl.style.textDecoration='none'; dl.style.textAlign='center'; dl.style.marginTop='10px';
+      dl.textContent = 'Download QR';
+      document.getElementById('qr-result').appendChild(dl);
+    }
+  }, 200);
+  burstConfetti();
+}
+</script>
+</body>
+</html>
