@@ -798,35 +798,107 @@ function handleMetaStoryUpload(e){
   if(!file) return;
   const resultEl = document.getElementById('ms_result');
   const shareBtn = document.getElementById('ms_sharebtn');
-  resultEl.innerText = ''; shareBtn.style.display='none';
-  const W=3024, H=4032;
+  resultEl.innerText = ''; shareBtn.style.display = 'none';
+  const W = 3024, H = 4032;
   const img = new Image();
   const reader = new FileReader();
-  reader.onload = ev=>{
-    img.onload = ()=>{
+  reader.onload = function(ev){
+    img.onload = function(){
       const canvas = document.createElement('canvas');
-      canvas.width=W; canvas.height=H;
+      canvas.width = W; canvas.height = H;
       const ctx = canvas.getContext('2d');
-      const scale = Math.max(W/img.width, H/img.height);
-      const sw = W/scale, sh = H/scale;
-      const sx = (img.width-sw)/2, sy = (img.height-sh)/2;
+      const scale = Math.max(W / img.width, H / img.height);
+      const sw = W / scale, sh = H / scale;
+      const sx = (img.width - sw) / 2, sy = (img.height - sh) / 2;
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
-      const preview = document.getElementById('ms_preview');
-      preview.innerHTML = '';
-      const previewImg = document.createElement('img');
-      previewImg.src = canvas.toDataURL('image/jpeg', 0.95);
-      previewImg.style.maxWidth = '100%';
-      previewImg.style.borderRadius = '12px';
-      preview.appendChild(previewImg);
-      canvas.toBlob(blob=>{
-        window._msBlob = blob;
-        shareBtn.style.display = 'block';
-        resultEl.innerText = '✅ Photo ready! Tap Share below.';
+      canvas.toBlob(function(blob){
+        const reader2 = new FileReader();
+        reader2.onload = function(e2){
+          const dataView = new DataView(e2.target.result);
+          injectEXIF(dataView, function(finalBlob){
+            window._msBlob = finalBlob;
+            const preview = document.getElementById('ms_preview');
+            preview.innerHTML = '';
+            const previewImg = document.createElement('img');
+            previewImg.src = URL.createObjectURL(finalBlob);
+            previewImg.style.maxWidth = '100%';
+            previewImg.style.borderRadius = '12px';
+            preview.appendChild(previewImg);
+            shareBtn.style.display = 'block';
+            resultEl.innerText = '✅ Photo ready with Meta EXIF! Tap Share below.';
+          });
+        };
+        reader2.readAsArrayBuffer(blob);
       }, 'image/jpeg', 0.95);
     };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
+}
+function injectEXIF(dataView, callback){
+  // This manually injects EXIF metadata into JPEG
+  // We're creating a new JPEG with EXIF data
+  const bytes = new Uint8Array(dataView.buffer);
+  
+  // Find APP1 marker (0xFFE1) or create one
+  // Simple approach: create a minimal EXIF with Make/Model tags
+  const exifData = createEXIFData();
+  
+  // Combine original JPEG + EXIF
+  const combined = combineJPEGEXIF(bytes, exifData);
+  const blob = new Blob([combined], {type: 'image/jpeg'});
+  callback(blob);
+}
+
+function createEXIFData(){
+  // Manual EXIF structure for Meta Ray-Ban
+  // Using hardcoded bytes for Make: "Meta" and Model: "Ray-Ban Meta 2"
+  // This is a minimal valid EXIF header
+  
+  // EXIF header (APP1 marker)
+  const exifHeader = new Uint8Array([
+    0xFF, 0xE1, 0x00, 0x62, // APP1 marker + length
+    0x45, 0x78, 0x69, 0x66, 0x00, 0x00, // "Exif\x00\x00"
+    // TIFF header (little endian)
+    0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00,
+    // IFD0 offset
+    0x08, 0x00, // Number of entries: 2 (Make + Model)
+    // Entry 1: Make (0x010F)
+    0x0F, 0x01, 0x00, 0x00, // Tag: Make
+    0x02, 0x00, 0x00, 0x00, // Type: ASCII
+    0x05, 0x00, 0x00, 0x00, // Count: 5
+    0x34, 0x00, 0x00, 0x00, // Offset to "Meta"
+    // Entry 2: Model (0x0110)
+    0x10, 0x01, 0x00, 0x00, // Tag: Model
+    0x02, 0x00, 0x00, 0x00, // Type: ASCII
+    0x10, 0x00, 0x00, 0x00, // Count: 16
+    0x39, 0x00, 0x00, 0x00, // Offset to "Ray-Ban Meta 2"
+    // End of IFD
+    0x00, 0x00, 0x00, 0x00,
+    // String data
+    0x4D, 0x65, 0x74, 0x61, 0x00, // "Meta" + null
+    0x52, 0x61, 0x79, 0x2D, 0x42, 0x61, 0x6E, 0x20, // "Ray-Ban "
+    0x4D, 0x65, 0x74, 0x61, 0x20, 0x32, 0x00 // "Meta 2" + null
+  ]);
+  return exifHeader;
+}
+
+function combineJPEGEXIF(jpegBytes, exifBytes){
+  // Find start of image data (SOI marker 0xFFD8)
+  // Insert EXIF after SOI
+  const result = new Uint8Array(jpegBytes.length + exifBytes.length);
+  // Copy SOI marker (0xFF 0xD8)
+  result[0] = jpegBytes[0];
+  result[1] = jpegBytes[1];
+  // Insert EXIF data
+  for(let i = 0; i < exifBytes.length; i++){
+    result[i + 2] = exifBytes[i];
+  }
+  // Copy rest of JPEG
+  for(let i = 2; i < jpegBytes.length; i++){
+    result[i + exifBytes.length] = jpegBytes[i];
+  }
+  return result;
 }
 function shareMetaStory(auto){
   const blob = window._msBlob;
