@@ -812,93 +812,81 @@ function handleMetaStoryUpload(e){
       const sx = (img.width - sw) / 2, sy = (img.height - sh) / 2;
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
       canvas.toBlob(function(blob){
-        const reader2 = new FileReader();
-        reader2.onload = function(e2){
-          const dataView = new DataView(e2.target.result);
-          injectEXIF(dataView, function(finalBlob){
-            window._msBlob = finalBlob;
-            const preview = document.getElementById('ms_preview');
-            preview.innerHTML = '';
-            const previewImg = document.createElement('img');
-            previewImg.src = URL.createObjectURL(finalBlob);
-            previewImg.style.maxWidth = '100%';
-            previewImg.style.borderRadius = '12px';
-            preview.appendChild(previewImg);
-            shareBtn.style.display = 'block';
-            resultEl.innerText = '✅ Photo ready with Meta EXIF! Tap Share below.';
-          });
-        };
-        reader2.readAsArrayBuffer(blob);
+        // EXIF inject karne ke liye
+        injectEXIFManual(blob, function(finalBlob){
+          window._msBlob = finalBlob;
+          const preview = document.getElementById('ms_preview');
+          preview.innerHTML = '';
+          const previewImg = document.createElement('img');
+          previewImg.src = URL.createObjectURL(finalBlob);
+          previewImg.style.maxWidth = '100%';
+          previewImg.style.borderRadius = '12px';
+          preview.appendChild(previewImg);
+          shareBtn.style.display = 'block';
+          resultEl.innerText = '✅ Photo ready with Meta EXIF! Tap Share below.';
+        });
       }, 'image/jpeg', 0.95);
     };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
 }
-function injectEXIF(dataView, callback){
-  // This manually injects EXIF metadata into JPEG
-  // We're creating a new JPEG with EXIF data
-  const bytes = new Uint8Array(dataView.buffer);
-  
-  // Find APP1 marker (0xFFE1) or create one
-  // Simple approach: create a minimal EXIF with Make/Model tags
-  const exifData = createEXIFData();
-  
-  // Combine original JPEG + EXIF
-  const combined = combineJPEGEXIF(bytes, exifData);
-  const blob = new Blob([combined], {type: 'image/jpeg'});
-  callback(blob);
+function injectEXIFManual(blob, callback){
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const buffer = e.target.result;
+    const view = new DataView(buffer);
+    // Check JPEG signature
+    if(view.getUint8(0) !== 0xFF || view.getUint8(1) !== 0xD8){
+      callback(blob);
+      return;
+    }
+    // Create EXIF data with Make: "Meta" and Model: "Ray-Ban Meta 2"
+    const exifBytes = createEXIFBytes();
+    // Insert EXIF after SOI (0xFF 0xD8)
+    const newBuffer = new Uint8Array(buffer.byteLength + exifBytes.length);
+    newBuffer[0] = 0xFF; newBuffer[1] = 0xD8;
+    for(let i = 0; i < exifBytes.length; i++){
+      newBuffer[i + 2] = exifBytes[i];
+    }
+    // Copy rest of JPEG data
+    const srcBytes = new Uint8Array(buffer);
+    for(let i = 2; i < srcBytes.length; i++){
+      newBuffer[i + exifBytes.length] = srcBytes[i];
+    }
+    const newBlob = new Blob([newBuffer], {type: 'image/jpeg'});
+    callback(newBlob);
+  };
+  reader.readAsArrayBuffer(blob);
 }
 
-function createEXIFData(){
-  // Manual EXIF structure for Meta Ray-Ban
-  // Using hardcoded bytes for Make: "Meta" and Model: "Ray-Ban Meta 2"
-  // This is a minimal valid EXIF header
-  
-  // EXIF header (APP1 marker)
-  const exifHeader = new Uint8Array([
-    0xFF, 0xE1, 0x00, 0x62, // APP1 marker + length
+function createEXIFBytes(){
+  // This is a valid EXIF header with Make: "Meta" and Model: "Ray-Ban Meta 2"
+  // APP1 marker + Exif header + TIFF header + IFD entries
+  return new Uint8Array([
+    0xFF, 0xE1, 0x00, 0x6A, // APP1 marker, length = 106 bytes
     0x45, 0x78, 0x69, 0x66, 0x00, 0x00, // "Exif\x00\x00"
-    // TIFF header (little endian)
-    0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00,
+    0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00, // TIFF header (little endian)
     // IFD0 offset
-    0x08, 0x00, // Number of entries: 2 (Make + Model)
-    // Entry 1: Make (0x010F)
-    0x0F, 0x01, 0x00, 0x00, // Tag: Make
+    0x08, 0x00, // Number of entries: 2
+    // Entry 1: Make (tag 0x010F)
+    0x0F, 0x01, 0x00, 0x00, // Tag: 0x010F (Make)
     0x02, 0x00, 0x00, 0x00, // Type: ASCII
     0x05, 0x00, 0x00, 0x00, // Count: 5
-    0x34, 0x00, 0x00, 0x00, // Offset to "Meta"
-    // Entry 2: Model (0x0110)
-    0x10, 0x01, 0x00, 0x00, // Tag: Model
+    0x36, 0x00, 0x00, 0x00, // Offset to "Meta\0"
+    // Entry 2: Model (tag 0x0110)
+    0x10, 0x01, 0x00, 0x00, // Tag: 0x0110 (Model)
     0x02, 0x00, 0x00, 0x00, // Type: ASCII
     0x10, 0x00, 0x00, 0x00, // Count: 16
-    0x39, 0x00, 0x00, 0x00, // Offset to "Ray-Ban Meta 2"
+    0x3B, 0x00, 0x00, 0x00, // Offset to "Ray-Ban Meta 2\0"
     // End of IFD
     0x00, 0x00, 0x00, 0x00,
-    // String data
-    0x4D, 0x65, 0x74, 0x61, 0x00, // "Meta" + null
+    // String data at offset 0x36: "Meta\0"
+    0x4D, 0x65, 0x74, 0x61, 0x00,
+    // String data at offset 0x3B: "Ray-Ban Meta 2\0"
     0x52, 0x61, 0x79, 0x2D, 0x42, 0x61, 0x6E, 0x20, // "Ray-Ban "
-    0x4D, 0x65, 0x74, 0x61, 0x20, 0x32, 0x00 // "Meta 2" + null
+    0x4D, 0x65, 0x74, 0x61, 0x20, 0x32, 0x00, 0x00 // "Meta 2\0\0"
   ]);
-  return exifHeader;
-}
-
-function combineJPEGEXIF(jpegBytes, exifBytes){
-  // Find start of image data (SOI marker 0xFFD8)
-  // Insert EXIF after SOI
-  const result = new Uint8Array(jpegBytes.length + exifBytes.length);
-  // Copy SOI marker (0xFF 0xD8)
-  result[0] = jpegBytes[0];
-  result[1] = jpegBytes[1];
-  // Insert EXIF data
-  for(let i = 0; i < exifBytes.length; i++){
-    result[i + 2] = exifBytes[i];
-  }
-  // Copy rest of JPEG
-  for(let i = 2; i < jpegBytes.length; i++){
-    result[i + exifBytes.length] = jpegBytes[i];
-  }
-  return result;
 }
 function shareMetaStory(auto){
   const blob = window._msBlob;
