@@ -516,7 +516,8 @@ passport: ()=>`
   <div class="previewbox" id="pp_preview"></div>`,
 
 metastory: ()=>`
-  <h3>📲 Meta Story</h3><p class="desc">Upload a photo — it's auto-resized to 3024×4032px (the size that unlocks Instagram's Story spin effect) and your share sheet pops up instantly so you can post it to any app.</p>
+  <h3>📲 Meta Story</h3>
+  <p class="desc">Upload a photo — it's auto-resized to 3024×4032px (the size that unlocks Instagram's Story spin effect) and your share sheet pops up instantly so you can post it to any app.</p>
   <input type="file" id="ms_file" accept="image/*">
   <div class="previewbox" id="ms_preview"></div>
   <button class="btn" id="ms_sharebtn" style="display:none" onclick="shareMetaStory(false)">📤 Share</button>
@@ -1931,6 +1932,7 @@ function doPassport(){
 
 /* ----- Meta Story (resize to 3024x4032 + instant share) ----- */
 function handleMetaStoryUpload(e){
+function handleMetaStoryUpload(e){
   const file = e.target.files[0];
   if(!file) return;
   const resultEl = document.getElementById('ms_result');
@@ -1958,12 +1960,28 @@ function handleMetaStoryUpload(e){
       canvas.toBlob(blob=>{
         window._msBlob = blob;
         shareBtn.style.display = 'block';
-        shareMetaStory(true);
+        resultEl.innerText = '✅ Photo ready! Tap Share below.';
       }, 'image/jpeg', 0.95);
     };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
+}
+
+function shareMetaStory(auto){
+  const blob = window._msBlob;
+  if(!blob) return;
+  const file = new File([blob], 'meta-story.jpg', {type:'image/jpeg'});
+  const resultEl = document.getElementById('ms_result');
+  if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+    navigator.share({files:[file], title:'Meta Story', text:'Converted via ToolBox'}).then(()=>{
+      resultEl.innerText = 'Shared! ✅';
+    }).catch(()=>{
+      if(!auto) resultEl.innerText = 'Share cancelled.';
+    });
+  } else {
+    resultEl.innerText = '❌ Your browser does not support sharing. Try opening this page in Chrome or Safari on your phone.';
+  }
 }
 function shareMetaStory(auto){
   const blob = window._msBlob;
